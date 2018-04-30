@@ -75,29 +75,35 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
     }
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(contentDidAppear:) name:RCTContentDidAppearNotification object:nil];
-
+    [self hideNavigationBar];
     return self;
 }
 
+- (void)hideNavigationBar {
+    [self.navigationBar setBackgroundImage:[UIImage new]
+                             forBarMetrics:UIBarMetricsDefault];
+    self.navigationBar.shadowImage = [UIImage new];
+    self.navigationBar.translucent = YES;
+    self.navigationController.view.backgroundColor = [UIColor clearColor];
+}
 
 - (void)contentDidAppear:(NSNotification *)note{
-  NSLog(@"contentDidAppear, transitioning: %@ rendering: %@", @(_transitioning), @(_rendering));
+    dispatch_async(dispatch_get_main_queue(), ^{
+        _rendering = NO;
+        if ([_queuedViewControllers count] > 0) {
+            NSDictionary *firstVC = [_queuedViewControllers firstObject];
+            if (![[firstVC[@"viewController"] view] isEqual: note.object]) {
+                return;
+            }
 
-  dispatch_async(dispatch_get_main_queue(), ^{
-    _rendering = NO;
-    if (_queuedViewController != nil) {
-      if (![[_queuedViewController[@"viewController"] view] isEqual: note.object]) {
-        return;
-      }
+            RCCViewController* vc = firstVC[@"viewController"];
+            BOOL animated = [firstVC[@"animated"] boolValue];
 
-      RCCViewController* vc = _queuedViewController[@"viewController"];
-      BOOL animated = [_queuedViewController[@"animated"] boolValue];
+            _transitioning = NO;
 
-      _transitioning = NO;
-
-      [self pushViewController:vc animated:animated];
-    }
-  });
+            [self pushViewController:vc animated:animated];
+        }
+    });
 }
 
 
@@ -526,28 +532,24 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
 }
 
 - (void)pushViewController:(UIViewController *)viewController animated:(BOOL)animated {
-
-  // Do not attempt to block rendering if this is the first
-  // view controller. Not having a _queuedViewController signals
-  // we should block the navigation push until React Native
-  // has completed its rendering on the root view.
-  if([self.viewControllers count] > 0 && _queuedViewController == nil) {
-    _rendering = YES;
-    _transitioning = NO;
-    _queuedViewController = @{ @"viewController": viewController, @"animated": @(animated) };
-    NSLog(@"Queued, transitioning: %@ rendering: %@", @(_transitioning), @(_rendering));
-}
-
-    if (_transitioning) {
+    // Do not attempt to block rendering if this is the first
+    // view controller. Not having a _queuedViewController signals
+    // we should block the navigation push until React Native
+    // has completed its rendering on the root view.
+    if([_queuedViewControllers count] == 0) {
+        _rendering = YES;
+        _transitioning = NO;
         NSDictionary *pushDetails =@{ @"viewController": viewController, @"animated": @(animated) };
         [_queuedViewControllers addObject:pushDetails];
+    }
 
+    // Guard against a transition or render if already in process
+    if (_transitioning || _rendering) {
         return;
     }
 
     _transitioning = YES;
- _queuedViewController = nil;
-  NSLog(@"Pushing, transitioning: %@ rendering: %@", @(_transitioning), @(_rendering));
+    [_queuedViewControllers removeObjectAtIndex:0];
     [super pushViewController:viewController animated:animated];
 }
 
@@ -564,7 +566,6 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
         _transitioning = NO;
         if ([_queuedViewControllers count] > 0) {
             NSDictionary *toPushDetails = [_queuedViewControllers firstObject];
-            [_queuedViewControllers removeObjectAtIndex:0];
             [self pushViewController:toPushDetails[@"viewController"] animated:[toPushDetails[@"animated"] boolValue]];
         }
     });
