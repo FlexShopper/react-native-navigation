@@ -324,8 +324,35 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     [self setStyleOnAppearForViewController:self appeared:true];
 }
 
+- (UIColor *)hexToUIColor:(NSString *)hexString {
+    unsigned rgbValue = 0;
+    NSScanner *scanner = [NSScanner scannerWithString:hexString];
+    [scanner setScanLocation:1];
+    [scanner scanHexInt:&rgbValue];
+    return [UIColor 
+      colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0 
+      green:((rgbValue & 0xFF00) >> 8)/255.0 
+      blue:(rgbValue & 0xFF)/255.0 
+      alpha:1.0];
+}
+
 -(void)setStyleOnAppearForViewController:(UIViewController*)viewController appeared:(BOOL)appeared {
     NSString *screenBackgroundColor = self.navigatorStyle[@"screenBackgroundColor"];
+
+    NSDictionary *gradientData = self.navigatorStyle[@"screenBackgroundGradient"];
+
+    if (gradientData) {
+        CAGradientLayer *gradient = [CAGradientLayer layer];
+        gradient.frame = viewController.view.bounds;
+        UIColor* startColor = [self hexToUIColor:[gradientData valueForKey:@"startColor"]];
+        UIColor* endColor = [self hexToUIColor:[gradientData valueForKey:@"endColor"]];
+
+        gradient.colors = @[(id)[startColor CGColor], (id)[endColor CGColor]];
+        gradient.startPoint = CGPointMake(0.0, 0.5);
+        gradient.endPoint = CGPointMake(0.0, 0.51);
+        [viewController.view.layer insertSublayer:gradient atIndex:0];
+    }
+
     if (screenBackgroundColor) {
 
         UIColor *color = screenBackgroundColor != (id)[NSNull null] ? [RCTConvert UIColor:screenBackgroundColor] : nil;
