@@ -334,9 +334,9 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
             transition.type = kCATransitionFade;
 
             [self.view.layer addAnimation:transition forKey:kCATransition];
-            [self setViewControllers:viewControllers animated:NO];
+            [self setViewControllersAfterRendering:viewControllers animated: NO];
         } else {
-            [self setViewControllers:viewControllers animated:animated];
+            [self setViewControllersAfterRendering:viewControllers animated: animated];
         }
         return;
     }
@@ -529,6 +529,15 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
     return [self.topViewController preferredStatusBarStyle];
+}
+
+- (void)setViewControllersAfterRendering: (NSArray *)viewControllers animated:(BOOL)animated {
+
+    // Guard against a transition or render if already in process
+    if (_rendering || _transitioning) {
+        return;
+    }
+    [self setViewControllers:viewControllers animated:animated];
 }
 
 - (void)pushViewController:(UIViewController *)viewController animated:(BOOL)animated {
