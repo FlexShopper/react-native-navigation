@@ -110,7 +110,7 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
 
         if (_resetRendering) {
             _resetRendering = NO;
-            [self setViewControllers:_queuedResetViewControllers animated:NO];
+            [self setViewControllers:_queuedResetViewControllers animated:_resetVCAnimation];
         }
     });
 }
@@ -336,17 +336,17 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
 
         BOOL animated = actionParams[@"animated"] ? [actionParams[@"animated"] boolValue] : YES;
 
-         NSString *animationType = actionParams[@"animationType"];
-         if ([animationType isEqualToString:@"fade"]) {
-             CATransition *transition = [CATransition animation];
-             transition.duration = 0.25;
-             transition.type = kCATransitionFade;
+        NSString *animationType = actionParams[@"animationType"];
+        if ([animationType isEqualToString:@"fade"]) {
+            CATransition *transition = [CATransition animation];
+            transition.duration = 0.25;
+            transition.type = kCATransitionFade;
 
-             [self.view.layer addAnimation:transition forKey:kCATransition];
-             [self setViewControllersOnRenderComplete:viewControllers animated: animated];
-         } else {
-             [self setViewControllersOnRenderComplete:viewControllers animated: animated];
-         }
+            [self.view.layer addAnimation:transition forKey:kCATransition];
+            [self setViewControllersOnRenderComplete:viewControllers animated: NO];
+        } else {
+            [self setViewControllersOnRenderComplete:viewControllers animated: animated];
+        }
 
         return;
     }
