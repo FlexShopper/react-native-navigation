@@ -18,7 +18,11 @@
 @implementation RCCNavigationController {
     BOOL _transitioning;
     BOOL _rendering;
+    BOOL _resetRendering;
+    BOOL _resetVCAnimation;
     NSMutableArray *_queuedViewControllers;
+    NSArray *_queuedResetViewControllers;
+
 }
 
 NSString const *CALLBACK_ASSOCIATED_KEY = @"RCCNavigationController.CALLBACK_ASSOCIATED_KEY";
@@ -102,6 +106,11 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
             _transitioning = NO;
 
             [self pushViewController:vc animated:animated];
+        }
+
+        if (_resetRendering) {
+            _resetRendering = NO;
+            [self setViewControllers:_queuedResetViewControllers animated:_resetVCAnimation];
         }
     });
 }
@@ -334,10 +343,11 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
             transition.type = kCATransitionFade;
 
             [self.view.layer addAnimation:transition forKey:kCATransition];
-            [self setViewControllers:viewControllers animated:NO];
+            [self setViewControllersOnRenderComplete:viewControllers animated: NO];
         } else {
-            [self setViewControllers:viewControllers animated:animated];
+            [self setViewControllersOnRenderComplete:viewControllers animated: animated];
         }
+
         return;
     }
 
@@ -529,6 +539,12 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
     return [self.topViewController preferredStatusBarStyle];
+}
+
+- (void)setViewControllersOnRenderComplete: (NSArray *)viewControllers animated:(BOOL)animated {
+    _queuedResetViewControllers = viewControllers;
+    _resetVCAnimation = animated;
+    _resetRendering = YES;
 }
 
 - (void)pushViewController:(UIViewController *)viewController animated:(BOOL)animated {
